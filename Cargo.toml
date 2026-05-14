@@ -1,0 +1,11 @@
+[package]
+name = "mdbook-summarizer"
+version = "0.1.0"
+edition = "2024"
+authors = ["wustites"]
+description = "Generate mdBook SUMMARY.md files from a book source tree"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/wustites/mdbook-summarizer"
+
+[dependencies]

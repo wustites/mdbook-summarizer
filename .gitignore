@@ -1,0 +1,25 @@
+/target/
+
+# Rust backup files
+**/*.rs.bk
+
+# Local environment
+.env
+.env.*
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.sublime-*
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*~
