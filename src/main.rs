@@ -42,10 +42,10 @@ fn main() -> Result<()> {
     let src_dir = args.src;
     let output = args.output.unwrap_or_else(|| src_dir.join("SUMMARY.md"));
 
-    println!("扫描目录: {}", src_dir.display());
+    println!("Scanning directory: {}", src_dir.display());
 
     if !src_dir.exists() {
-        return Err(format!("错误: 目录 {} 不存在", src_dir.display()).into());
+        return Err(format!("Error: directory {} does not exist", src_dir.display()).into());
     }
 
     let entries = collect_files_and_dirs(&src_dir, &src_dir)?;
@@ -55,31 +55,31 @@ fn main() -> Result<()> {
 
     if args.dry_run {
         print!("{content}");
-        println!("包含 {total_entries} 个条目");
+        println!("Contains {total_entries} entries");
         return Ok(());
     }
 
     if args.check {
         let current = fs::read_to_string(&output).unwrap_or_default();
         if current != content {
-            return Err(format!("{} 需要更新", output.display()).into());
+            return Err(format!("{} needs to be updated", output.display()).into());
         }
-        println!("{} 已是最新", output.display());
-        println!("包含 {total_entries} 个条目");
+        println!("{} is up to date", output.display());
+        println!("Contains {total_entries} entries");
         return Ok(());
     }
 
     match fs::read_to_string(&output) {
         Ok(current) if current == content => {
-            println!("{} 无变化", output.display());
+            println!("{} is unchanged", output.display());
         }
         _ => {
             fs::write(&output, content)?;
-            println!("已生成 {}", output.display());
+            println!("Generated {}", output.display());
         }
     }
 
-    println!("包含 {total_entries} 个条目");
+    println!("Contains {total_entries} entries");
     Ok(())
 }
 
@@ -106,18 +106,18 @@ where
             "--src" => {
                 src = PathBuf::from(
                     iter.next()
-                        .ok_or_else(|| "--src 需要一个目录参数".to_string())?,
+                        .ok_or_else(|| "--src requires a directory argument".to_string())?,
                 );
             }
             "-o" | "--output" => {
-                output = Some(PathBuf::from(
-                    iter.next()
-                        .ok_or_else(|| "--output 需要一个文件参数".to_string())?,
-                ));
+                output =
+                    Some(PathBuf::from(iter.next().ok_or_else(|| {
+                        "--output requires a file argument".to_string()
+                    })?));
             }
             "--dry-run" => dry_run = true,
             "--check" => check = true,
-            value => return Err(format!("未知参数: {value}").into()),
+            value => return Err(format!("Unknown argument: {value}").into()),
         }
     }
 
