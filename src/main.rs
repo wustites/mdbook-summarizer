@@ -4,7 +4,7 @@ use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const INDEX_NAMES: &[&str] = &["README.md", "index.md"];
+const INDEX_NAMES: &[&str] = &["README.md", "index.md", "SUMMARY.md"];
 const EXCLUDE_DIRS: &[&str] = &[
     ".git",
     ".github",
@@ -514,6 +514,29 @@ mod tests {
             count_entries(&entries) + usize::from(root_index.is_some()),
             3
         );
+
+        fs::remove_dir_all(temp)?;
+        Ok(())
+    }
+
+    #[test]
+    fn summary_md_as_index() -> Result<()> {
+        let temp = temp_dir();
+        let src = temp.join("src");
+        fs::create_dir_all(src.join("appendix"))?;
+        fs::write(src.join("README.md"), "# Book\n")?;
+        fs::write(src.join("appendix").join("SUMMARY.md"), "# Appendix\n")?;
+        fs::write(
+            src.join("appendix").join("notes.md"),
+            "# Notes\n",
+        )?;
+
+        let entries = collect_files_and_dirs(&src, &src)?;
+        let root_index = find_index_file(&src)?;
+        let summary = generate_summary(&src, &entries, root_index.as_deref())?;
+
+        assert!(summary.contains("* [Appendix](appendix/SUMMARY.md)"));
+        assert!(summary.contains("  * [Notes](appendix/notes.md)"));
 
         fs::remove_dir_all(temp)?;
         Ok(())
