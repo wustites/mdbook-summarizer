@@ -526,10 +526,7 @@ mod tests {
         fs::create_dir_all(src.join("appendix"))?;
         fs::write(src.join("README.md"), "# Book\n")?;
         fs::write(src.join("appendix").join("SUMMARY.md"), "# Appendix\n")?;
-        fs::write(
-            src.join("appendix").join("notes.md"),
-            "# Notes\n",
-        )?;
+        fs::write(src.join("appendix").join("notes.md"), "# Notes\n")?;
 
         let entries = collect_files_and_dirs(&src, &src)?;
         let root_index = find_index_file(&src)?;
