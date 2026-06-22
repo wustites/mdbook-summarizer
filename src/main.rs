@@ -22,6 +22,7 @@ struct Args {
     output: Option<PathBuf>,
     dry_run: bool,
     check: bool,
+    auto_readme: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -48,7 +49,7 @@ fn main() -> Result<()> {
         return Err(format!("Error: directory {} does not exist", src_dir.display()).into());
     }
 
-    let entries = collect_files_and_dirs(&src_dir, &src_dir)?;
+    let entries = collect_files_and_dirs(&src_dir, &src_dir, args.auto_readme)?;
     let root_index = find_index_file(&src_dir)?;
     let content = generate_summary(&src_dir, &entries, root_index.as_deref())?;
     let total_entries = count_entries(&entries) + usize::from(root_index.is_some());
@@ -91,6 +92,7 @@ where
     let mut output = None;
     let mut dry_run = false;
     let mut check = false;
+    let mut auto_readme = false;
     let mut iter = args.into_iter();
 
     while let Some(arg) = iter.next() {
@@ -117,6 +119,7 @@ where
             }
             "--dry-run" => dry_run = true,
             "--check" => check = true,
+            "--auto-readme" => auto_readme = true,
             value => return Err(format!("Unknown argument: {value}").into()),
         }
     }
@@ -126,6 +129,7 @@ where
         output,
         dry_run,
         check,
+        auto_readme,
     })
 }
 
@@ -136,6 +140,7 @@ Usage: mdbook-summarizer [OPTIONS]\n\n\
 Options:\n  \
 --src <DIR>        Source directory to scan [default: src]\n  \
 -o, --output <FILE> Output file [default: <src>/SUMMARY.md]\n  \
+--auto-readme      Generate README.md for dirs without index\n  \
 --dry-run          Print generated content without writing\n  \
 --check            Verify the output file is up to date\n  \
 -h, --help         Print help\n  \
@@ -273,6 +278,16 @@ fn find_index_file(dirpath: &Path) -> Result<Option<PathBuf>> {
     Ok(None)
 }
 
+fn generate_auto_readme(dirpath: &Path) -> Result<PathBuf> {
+    let dir_name = dirpath
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or_default();
+    let readme_path = dirpath.join("README.md");
+    fs::write(&readme_path, format!("# {dir_name}\n"))?;
+    Ok(readme_path)
+}
+
 fn to_summary_path(src_dir: &Path, path: &Path) -> Result<String> {
     let relative = path.strip_prefix(src_dir)?;
     Ok(relative
@@ -282,7 +297,11 @@ fn to_summary_path(src_dir: &Path, path: &Path) -> Result<String> {
         .join("/"))
 }
 
-fn collect_files_and_dirs(root_dir: &Path, src_dir: &Path) -> Result<Vec<Entry>> {
+fn collect_files_and_dirs(
+    root_dir: &Path,
+    src_dir: &Path,
+    auto_readme: bool,
+) -> Result<Vec<Entry>> {
     let mut paths = Vec::new();
     for entry in fs::read_dir(root_dir)? {
         paths.push(entry?.path());
@@ -300,11 +319,16 @@ fn collect_files_and_dirs(root_dir: &Path, src_dir: &Path) -> Result<Vec<Entry>>
                 continue;
             }
 
-            if let Some(index_file) = find_index_file(&item_path)? {
+            let mut index_file = find_index_file(&item_path)?;
+            if index_file.is_none() && auto_readme {
+                index_file = Some(generate_auto_readme(&item_path)?);
+            }
+
+            if let Some(index_file) = index_file {
                 entries.push(Entry::Dir {
                     title: extract_title_from_md(&index_file),
                     path: to_summary_path(src_dir, &index_file)?,
-                    children: collect_files_and_dirs(&item_path, src_dir)?,
+                    children: collect_files_and_dirs(&item_path, src_dir, auto_readme)?,
                 });
             }
             continue;
@@ -503,7 +527,7 @@ mod tests {
         fs::write(src.join("part").join("index.md"), "# Part\n")?;
         fs::write(src.join("part").join("chapter-2.md"), "# Chapter Two\n")?;
 
-        let entries = collect_files_and_dirs(&src, &src)?;
+        let entries = collect_files_and_dirs(&src, &src, false)?;
         let root_index = find_index_file(&src)?;
         let summary = generate_summary(&src, &entries, root_index.as_deref())?;
 
@@ -527,5 +551,25 @@ mod tests {
         let path = env::temp_dir().join(format!("mdbook-summarizer-test-{nanos}"));
         fs::create_dir_all(&path).expect("temp dir should be created");
         path
+    }
+
+    #[test]
+    fn auto_generates_readme_for_empty_dir() -> Result<()> {
+        let temp = temp_dir();
+        let src = temp.join("src");
+        fs::create_dir_all(src.join("empty_part"))?;
+        fs::write(src.join("README.md"), "# Book\n")?;
+
+        let entries = collect_files_and_dirs(&src, &src, true)?;
+        let readme_path = src.join("empty_part").join("README.md");
+        assert!(readme_path.exists());
+        assert_eq!(fs::read_to_string(&readme_path)?, "# empty_part\n");
+
+        let root_index = find_index_file(&src)?;
+        let summary = generate_summary(&src, &entries, root_index.as_deref())?;
+        assert!(summary.contains("* [empty_part](empty_part/README.md)"));
+
+        fs::remove_dir_all(temp)?;
+        Ok(())
     }
 }

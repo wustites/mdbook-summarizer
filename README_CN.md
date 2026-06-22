@@ -35,6 +35,9 @@ mdbook-summarizer --src src --output SUMMARY.md
 # 预览生成内容，不写入文件
 mdbook-summarizer --dry-run
 
+# 为缺少索引文件的目录自动生成 README.md
+mdbook-summarizer --auto-readme
+
 # 验证输出文件是否为最新（适用于 CI）
 mdbook-summarizer --check
 ```
@@ -45,6 +48,7 @@ mdbook-summarizer --check
 |------|------|
 | `--src <DIR>` | 要扫描的源目录（默认：`src`） |
 | `-o, --output <FILE>` | 输出文件路径（默认：`<src>/SUMMARY.md`） |
+| `--auto-readme` | 为缺少索引文件的目录自动生成 `README.md`（内容为 `# 目录名`） |
 | `--dry-run` | 将生成内容打印到标准输出，不写入文件 |
 | `--check` | 输出文件过时则报错退出 |
 | `-h, --help` | 打印帮助信息 |
@@ -53,6 +57,7 @@ mdbook-summarizer --check
 ## 行为说明
 
 - 将 `README.md`、`index.md` 或 `SUMMARY.md` 视为目录的索引入口。
+- `--auto-readme` 为没有索引文件的目录自动生成 `README.md`，内容为 `# 目录名`。
 - 提取第一个一级 Markdown 标题（`# 标题`）作为条目标题。
 - 未找到标题时，将文件名转换为首字母大写作为回退标题。
 - 自动去除标题中的行内代码和 Markdown 链接。
