@@ -290,13 +290,14 @@ fn generate_auto_readme(dirpath: &Path) -> Result<PathBuf> {
 
 fn url_encode(s: &str) -> String {
     let mut encoded = String::new();
-    for byte in s.bytes() {
-        match byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
-                encoded.push(byte as char);
-            }
-            b' ' => encoded.push_str("%20"),
-            _ => encoded.push_str(&format!("%{:02X}", byte)),
+    for c in s.chars() {
+        match c {
+            'A'..='Z' | 'a'..='z' | '0'..='9' | '-' | '_' | '.' | '~' => encoded.push(c),
+            ' ' => encoded.push_str("%20"),
+            '#' => encoded.push_str("%23"),
+            '?' => encoded.push_str("%3F"),
+            '%' => encoded.push_str("%25"),
+            _ => encoded.push(c),
         }
     }
     encoded
