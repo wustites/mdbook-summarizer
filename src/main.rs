@@ -288,11 +288,25 @@ fn generate_auto_readme(dirpath: &Path) -> Result<PathBuf> {
     Ok(readme_path)
 }
 
+fn url_encode(s: &str) -> String {
+    let mut encoded = String::new();
+    for byte in s.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                encoded.push(byte as char);
+            }
+            b' ' => encoded.push_str("%20"),
+            _ => encoded.push_str(&format!("%{:02X}", byte)),
+        }
+    }
+    encoded
+}
+
 fn to_summary_path(src_dir: &Path, path: &Path) -> Result<String> {
     let relative = path.strip_prefix(src_dir)?;
     Ok(relative
         .components()
-        .map(|component| component.as_os_str().to_string_lossy())
+        .map(|component| url_encode(&component.as_os_str().to_string_lossy()))
         .collect::<Vec<_>>()
         .join("/"))
 }
